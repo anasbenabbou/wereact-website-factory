@@ -1,0 +1,45 @@
+@import "tailwindcss";
+
+/*
+ * Design tokens. The factory's Designer stage overrides these per brand.
+ * Tailwind v4 reads @theme tokens and exposes them as utilities + CSS vars.
+ */
+@theme {
+  --color-brand-50: #eef4ff;
+  --color-brand-100: #d9e6ff;
+  --color-brand-200: #bcd3ff;
+  --color-brand-300: #8fb6ff;
+  --color-brand-400: #5a8dff;
+  --color-brand-500: #2f63f6;
+  --color-brand-600: #1d47d8;
+  --color-brand-700: #1a39ae;
+  --color-brand-800: #1b3289;
+  --color-brand-900: #1c2f6e;
+  --color-ink: #0b1020;
+  --color-paper: #ffffff;
+
+  --font-sans: var(--font-sans-stack), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-display-stack), var(--font-sans-stack), sans-serif;
+}
+
+:root {
+  color-scheme: light;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background: var(--color-paper);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* Accessible focus ring everywhere. */
+:where(a, button, input, textarea, select):focus-visible {
+  outline: 2px solid var(--color-brand-500);
+  outline-offset: 2px;
+}
