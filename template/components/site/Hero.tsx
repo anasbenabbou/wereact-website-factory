@@ -1,6 +1,8 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import { Reveal } from '@/components/ui/Reveal';
+import { ShaderHeroClient } from '@/components/visual/ShaderHeroClient';
+import { Magnetic } from '@/components/ui/Magnetic';
 
 /**
  * Hero. The factory passes a generated background image (Asset Engine) and
@@ -24,9 +26,10 @@ export function Hero({
         {image ? (
           <Image src={image} alt="" fill priority sizes="100vw" className="object-cover" />
         ) : (
-          // Rich gradient fallback so the template looks polished before the
-          // Asset Engine injects a generated hero image.
-          <div className="absolute inset-0 bg-[radial-gradient(120%_120%_at_50%_0%,var(--color-brand-100),var(--color-paper)_55%)]" />
+          // Animated WebGL gradient by default (falls back to a static gradient
+          // on reduced-motion / no-WebGL). The factory swaps this for a video or
+          // photographic hero per the design.
+          <ShaderHeroClient />
         )}
         <div className="absolute inset-0 bg-gradient-to-b from-paper/40 via-paper/70 to-paper" />
       </div>
@@ -46,12 +49,15 @@ export function Hero({
         </Reveal>
         <Reveal delay={0.24}>
           <div className="mt-10 flex flex-wrap items-center justify-center gap-4">
-            <Link
-              href="#contact"
-              className="rounded-full bg-brand-600 px-7 py-3 font-semibold text-white shadow-lg shadow-brand-600/20 transition-transform hover:scale-[1.03] hover:bg-brand-700"
-            >
-              Start your project
-            </Link>
+            <Magnetic>
+              <Link
+                href="#contact"
+                data-cursor
+                className="inline-block rounded-full bg-brand-600 px-7 py-3 font-semibold text-white shadow-lg shadow-brand-600/20 transition-transform hover:bg-brand-700"
+              >
+                Start your project
+              </Link>
+            </Magnetic>
             <Link
               href="#work"
               className="rounded-full border border-ink/15 px-7 py-3 font-semibold text-ink transition-colors hover:bg-ink/5"

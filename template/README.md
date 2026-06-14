@@ -19,6 +19,25 @@ Next.js (App Router) + Tailwind CSS v4 starter the factory clones per client.
 4. Drop generated images into `public/` (Asset Engine).
 5. `npm install && npm run build` → deploy to Vercel.
 
+## Motion & visual kit (Awwwards-grade, performance-balanced)
+Reusable primitives — all respect `prefers-reduced-motion`:
+- `components/ui/SmoothScroll` — Lenis smooth scroll (global, in layout)
+- `components/ui/Cursor` — custom trailing cursor (desktop only)
+- `components/ui/Magnetic` — magnetic hover for buttons/logo
+- `components/ui/Parallax` — GSAP ScrollTrigger scroll-depth
+- `components/ui/SplitText` — word-by-word headline reveal (real text, SEO-safe)
+- `components/ui/PageTransition` — route transition (wired via `app/template.tsx`)
+- `components/ui/Reveal` — framer-motion scroll reveal
+- `components/visual/BgVideo` — lazy, poster-first background video
+- `components/visual/ShaderHeroClient` — animated WebGL gradient (dynamic, `ssr:false`)
+- `components/visual/Lottie` — lazy Lottie vector animation
+
+WebGL (three.js / R3F) and Lottie are dynamically imported so they stay out of
+the initial bundle — the home route's first load stays light.
+
+Assets: `tools/gen-image.mjs` (stock/AI images) and `tools/gen-video.mjs`
+(Pexels video → ffmpeg-optimized web loop + poster).
+
 ## Local dev
 ```bash
 npm install

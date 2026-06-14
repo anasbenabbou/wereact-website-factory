@@ -4,12 +4,13 @@ export const meta = {
   whenToUse: 'When the operator gives a website brief and wants a finished, deployed *.vercel.app preview',
   phases: [
     { title: 'Strategy', detail: 'brief → structured spec' },
-    { title: 'Design', detail: '3 design directions + judge' },
-    { title: 'Content', detail: 'copy + assets in parallel' },
-    { title: 'Build', detail: 'assemble Next.js app from template' },
+    { title: 'Design', detail: '3 award-grade art directions + judge' },
+    { title: 'Interaction', detail: 'motion & interaction design spec' },
+    { title: 'Content', detail: 'copy + assets (images/video) in parallel' },
+    { title: 'Build', detail: 'assemble Next.js app w/ motion + WebGL + video' },
     { title: 'SEO/GEO', detail: 'schema, meta, claude-seo audit + fixes' },
     { title: 'Deploy', detail: 'GitHub repo + Vercel preview' },
-    { title: 'QA', detail: '4 lenses in real browser' },
+    { title: 'QA', detail: '5 lenses incl. award-craft, in real browser' },
     { title: 'Fix', detail: 'apply QA fixes + redeploy' },
   ],
 };
@@ -21,6 +22,7 @@ const FACTORY = args?.factoryRoot || '/Users/apple/Desktop/wereact-website-facto
 const DIR = args?.clientDir || `${FACTORY}/clients/${slug}`;
 const TEMPLATE = `${FACTORY}/template`;
 const GENIMG = `${FACTORY}/tools/gen-image.mjs`;
+const GENVID = `${FACTORY}/tools/gen-video.mjs`;
 
 // ---- schemas --------------------------------------------------------------
 const SPEC_SCHEMA = {
@@ -57,6 +59,28 @@ const JUDGE_SCHEMA = {
   type: 'object',
   required: ['winnerIndex', 'why'],
   properties: { winnerIndex: { type: 'number' }, why: { type: 'string' } },
+};
+
+const INTERACTION_SCHEMA = {
+  type: 'object',
+  required: ['concept', 'heroTreatment', 'interactions'],
+  properties: {
+    concept: { type: 'string', description: 'the motion concept / signature moment' },
+    heroTreatment: { type: 'string', enum: ['shader', 'video', 'image', 'split'], description: 'hero background approach' },
+    interactions: {
+      type: 'array',
+      description: 'specific motions to implement using the template kit',
+      items: {
+        type: 'object',
+        required: ['where', 'effect', 'component'],
+        properties: {
+          where: { type: 'string', description: 'section/element' },
+          effect: { type: 'string', description: 'what happens' },
+          component: { type: 'string', description: 'SmoothScroll|Cursor|Magnetic|Parallax|SplitText|PageTransition|BgVideo|ShaderHeroClient|Lottie|framer-motion' },
+        },
+      },
+    },
+  },
 };
 
 const QA_SCHEMA = {
@@ -99,17 +123,20 @@ site should answer (for GEO). Be concrete and opinionated. Output the structured
 // ---- Stage 2: Design (3 variants + judge) ---------------------------------
 phase('Design');
 const designs = (await parallel(
-  ['bold & premium', 'clean & editorial', 'vivid & modern'].map((angle, i) => () =>
+  ['bold & premium', 'clean & editorial', 'vivid & experimental'].map((angle, i) => () =>
     agent(
-      `You are a senior brand/web designer. Design direction #${i + 1}, angle: "${angle}".
-Business: ${spec.businessName}. Tone: ${spec.tone}. Brand direction: ${spec.brandDirection || 'n/a'}.
-Audience: ${spec.audience}.
+      `You are an award-winning art director designing an Awwwards-caliber site. Direction #${i + 1}, angle: "${angle}".
+Business: ${spec.businessName}. Tone: ${spec.tone}. Brand direction: ${spec.brandDirection || 'n/a'}. Audience: ${spec.audience}.
 
-Produce a complete, distinctive design system that AVOIDS generic AI aesthetics (no default purple gradients,
-no Inter-everywhere unless justified). Give a 9-step brand color ramp (brand-50..900) plus ink/paper hex,
-Google Font choices for display + body, and a ready-to-paste Tailwind v4 @theme CSS block matching the
-template's token names (--color-brand-50.., --color-ink, --color-paper, --font-sans, --font-display).
-Also give a vivid hero image prompt. Use the frontend-design skill's principles.`,
+Aim for Site-of-the-Day craft: a strong, ORIGINAL art direction with a memorable concept — not a template. AVOID all
+generic-AI tells (default purple gradients, Inter everywhere, centered hero + 3 cards). Think distinctive type pairing
+(use characterful display fonts), confident color, generous negative space or bold maximalism, and a clear visual hook.
+Invoke the frontend-design skill's principles.
+
+Deliver: a 9-step brand color ramp (brand-50..900) + ink/paper hex; Google Font choices for display + body (pick fonts
+with real personality); a ready-to-paste Tailwind v4 @theme CSS block matching the template token names
+(--color-brand-50.., --color-ink, --color-paper, --font-sans, --font-display); a named concept + rationale; and a vivid
+hero direction (describe whether the hero should be an animated WebGL gradient, a video loop, or photographic, with a prompt).`,
       { label: `designer-${i + 1}`, phase: 'Design', schema: DESIGN_SCHEMA }
     )
   )
@@ -124,6 +151,24 @@ Pick the single strongest, most distinctive, most on-brief direction. Return its
 );
 const design = designs[judgeResult.winnerIndex] || designs[0];
 log(`Selected design: ${design?.name} — ${judgeResult.why}`);
+
+// ---- Stage 2b: Interaction design -----------------------------------------
+phase('Interaction');
+const interaction = await agent(
+  `You are an interaction designer for an Awwwards-caliber build. Design the MOTION layer for ${spec.businessName}.
+Selected art direction: "${design?.name}" — ${design?.rationale}. Hero idea: ${design?.heroPrompt || 'n/a'}.
+
+The Next.js template already ships these reusable primitives — spec which to use and where:
+  SmoothScroll (Lenis, global), Cursor (custom), Magnetic (buttons/logo), Parallax (scroll depth),
+  SplitText (headline word reveal), PageTransition (route reveal), BgVideo (optimized video bg),
+  ShaderHeroClient (animated WebGL gradient), Lottie (vector animation), framer-motion (general).
+
+Define a signature moment and a tasteful set of interactions (don't overdo it — restraint reads as premium).
+Pick ONE heroTreatment: shader | video | image | split. Performance budget: keep it balanced (Lighthouse ~85+),
+everything must respect prefers-reduced-motion (the primitives already do).`,
+  { label: 'interaction-designer', phase: 'Interaction', schema: INTERACTION_SCHEMA }
+);
+log(`Motion concept: ${interaction?.concept} | hero: ${interaction?.heroTreatment}`);
 
 // ---- Stage 3: Content (copy + assets in parallel) -------------------------
 phase('Content');
@@ -151,11 +196,14 @@ ASSET STRATEGY (in priority order):
 2. PHOTOGRAPHIC assets (real scenes/products/people): use the Asset Engine, which tries free stock first:
        node ${GENIMG} --prompt "<full description>" --query "<2-5 search keywords>" --out ${DIR}/public/hero.png --type hero
    It runs pexels → unsplash (free) → together → fal → gemini automatically. Always pass a short --query for good stock matches.
-3. Cinematic/bespoke shots only if needed: try the higgsfield MCP tools (ToolSearch: "higgsfield generate image").
+3. VIDEO (only if the interaction design picked heroTreatment="video"): use the Video Engine (free Pexels + ffmpeg):
+       node ${GENVID} --query "<2-4 keywords>" --out ${DIR}/public/hero.mp4 --poster ${DIR}/public/hero-poster.jpg --maxsec 10 --width 1600
+   It auto-optimizes to a small web loop and extracts a poster. For bespoke AI video use higgsfield generate_video (ToolSearch).
+4. Cinematic/bespoke images only if needed: try the higgsfield MCP tools (ToolSearch: "higgsfield generate image").
 
-Produce at minimum: a hero visual (SVG/CSS or photo per the design) and an OpenGraph image at ${DIR}/public/og.png
-(1200x630, brand-aligned — an SVG/CSS composition with the business name is ideal and free).
-Report each file created and the source used.`,
+The chosen hero treatment is: "${interaction?.heroTreatment || 'shader'}" — only generate a photo/video if that calls for it
+(shader/split need no asset). Always produce an OpenGraph image at ${DIR}/public/og.png (1200x630, brand-aligned — an
+SVG/CSS composition with the business name is ideal and free). Report each file created and the source used.`,
       { label: 'asset-producer', phase: 'Content' }
     ),
 ]);
@@ -171,8 +219,12 @@ STEPS:
 3. Replace the @theme block in ${DIR}/app/globals.css with this design's CSS:\n${design?.css || '(use template defaults)'}
 4. Set fonts in ${DIR}/app/layout.tsx to: display=${design?.fonts?.display || 'Sora'}, body=${design?.fonts?.body || 'Inter'} (next/font/google).
 5. Fill every section component and ${DIR}/app/page.tsx with the REAL copy below. Wire the FAQ items (question/answer) so FAQ schema emits. Add pages under app/ if the spec lists more than "/".
-6. Reference the generated hero image (public/hero.png) in <Hero image="/hero.png" /> if it exists.
-7. Run: cd ${DIR} && npm install && npm run build  — fix ALL type/build errors until it builds clean.
+6. HERO: implement the chosen treatment "${interaction?.heroTreatment || 'shader'}" —
+   shader → leave <Hero/> default (ShaderHeroClient); image → <Hero image="/hero.png"/>; video → use <BgVideo src="/hero.mp4" poster="/hero-poster.jpg"/> inside the hero; split → split-screen layout.
+7. MOTION: implement the interaction spec using the template kit (already wired: SmoothScroll + Cursor global, PageTransition via template.tsx). Apply per the spec:
+${(interaction?.interactions || []).map((x) => `   - ${x.where}: ${x.effect} [${x.component}]`).join('\n') || '   - tasteful scroll reveals + magnetic CTAs'}
+   Use SplitText for big headlines, Magnetic on primary CTAs, Parallax on hero/media, Reveal on sections. Keep it tasteful — restraint reads premium. Everything must respect reduced-motion (primitives already do).
+8. Run: cd ${DIR} && npm install --cache ./.npm-cache && npm run build  — fix ALL type/build errors until it builds clean. WebGL/Lottie must stay dynamically imported (ssr:false) so first load stays light.
 
 COPY TO USE:\n${copy || '(write sensible real copy from the spec)'}
 
@@ -224,8 +276,9 @@ phase('QA');
 const lenses = [
   { key: 'layout', prompt: 'visual layout, spacing, hierarchy, alignment, and any AI-slop/generic patterns' },
   { key: 'responsive', prompt: 'responsive behavior at mobile (375), tablet (768), desktop (1440) — overflow, broken grids, tap targets' },
-  { key: 'performance', prompt: 'performance: run Lighthouse, check LCP/CLS/INP, image sizing, font loading; target 95+' },
-  { key: 'a11y', prompt: 'accessibility: semantic HTML, landmarks, contrast, alt text, focus order, keyboard nav' },
+  { key: 'performance', prompt: 'performance: run Lighthouse, check LCP/CLS/INP, image/video sizing, font loading; target 85+ (balanced)' },
+  { key: 'a11y', prompt: 'accessibility: semantic HTML, landmarks, contrast, alt text, focus order, keyboard nav, reduced-motion honored' },
+  { key: 'award-craft', prompt: 'Awwwards-level craft: is the art direction distinctive (not generic-AI)? Do the motion/interactions feel intentional and smooth? Is there a memorable signature moment? Rate as if judging for Site of the Day and list what would hold it back' },
 ];
 const qa = (await parallel(
   lenses.map((l) => () =>
