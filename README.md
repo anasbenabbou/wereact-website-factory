@@ -11,15 +11,23 @@ Separate from the `dkm-apis` backend. See [the design spec](docs/specs/2026-06-1
 
 ## 🚀 How to trigger it
 
-In Claude Code, just give me a brief and ask to build. For example:
+**Folder-based intake (recommended):**
+```bash
+node new-client.mjs atlas-coffee "Atlas Coffee"   # scaffolds clients/atlas-coffee/
+```
+Fill in `brief.md` / `branding.md` / `design.md` with whatever you have (drop a
+logo in `assets/` if you've got one — blanks are auto-generated at award level),
+then tell me:
 
-> **"Build a website for a boutique Lisbon coffee roaster called Atlas Coffee —
-> premium, warm, sells subscriptions, target is specialty-coffee enthusiasts."**
+> **"build atlas-coffee"**
 
-I'll launch the `website-factory` workflow with your brief and hand back a live
-preview URL when it's done. You can also be explicit:
+I read the folder, **obey what you wrote, generate the rest, write my choices back**
+into branding.md/design.md for your approval, and hand back a live preview URL.
 
-> "Run the website factory: <your brief>"
+**Or just freeform** (the factory fills everything itself):
+
+> **"Build a website for a boutique Lisbon coffee roaster, Atlas Coffee — premium,
+> warm, sells subscriptions, for specialty-coffee enthusiasts."**
 
 To iterate after reviewing the preview:
 

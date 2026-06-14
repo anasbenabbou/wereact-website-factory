@@ -27,7 +27,7 @@ const GENVID = `${FACTORY}/tools/gen-video.mjs`;
 // ---- schemas --------------------------------------------------------------
 const SPEC_SCHEMA = {
   type: 'object',
-  required: ['businessName', 'goal', 'audience', 'tone', 'pages', 'sections', 'keywords'],
+  required: ['businessName', 'goal', 'audience', 'tone', 'pages', 'sections', 'keywords', 'brand'],
   properties: {
     businessName: { type: 'string' },
     tagline: { type: 'string' },
@@ -39,6 +39,23 @@ const SPEC_SCHEMA = {
     sections: { type: 'array', items: { type: 'string' }, description: 'home page sections in order' },
     keywords: { type: 'array', items: { type: 'string' }, description: 'primary SEO keywords' },
     geoQuestions: { type: 'array', items: { type: 'string' }, description: 'questions users ask AI engines this site should answer' },
+    referenceSites: { type: 'array', items: { type: 'string' }, description: 'inspiration URLs from design.md, if any' },
+    brand: {
+      type: 'object',
+      description: 'Resolved brand. Values from branding.md are LOCKED (obey them); blanks are for the designer to fill.',
+      properties: {
+        primaryColor: { type: 'string', description: 'hex or "" if not provided' },
+        accentColor: { type: 'string' },
+        neutral: { type: 'string' },
+        displayFont: { type: 'string' },
+        bodyFont: { type: 'string' },
+        logoPath: { type: 'string', description: 'relative path to provided logo in assets/, or "" if none → generate' },
+        locked: { type: 'array', items: { type: 'string' }, description: 'which brand fields the client provided (must be obeyed): e.g. ["primaryColor","displayFont","logo"]' },
+        motionIntensity: { type: 'string', description: 'subtle|medium|bold from design.md, or "" ' },
+        heroTreatment: { type: 'string', description: 'shader|video|image|split from design.md, or "" ' },
+        mood: { type: 'string', description: 'aesthetic from design.md, or "" ' },
+      },
+    },
   },
 };
 
@@ -109,16 +126,26 @@ const DEPLOY_SCHEMA = {
 // ---- Stage 1: Strategy ----------------------------------------------------
 phase('Strategy');
 const spec = await agent(
-  `You are the Strategist for a premium web studio. Turn this client brief into a precise website spec.
+  `You are the Strategist for a premium web studio. Produce a precise website spec.
 
-BRIEF: """${brief}"""
+FIRST, read the client folder ${DIR} if it exists (use Bash/Read):
+  - brief.md       → goal, audience, pages, CTA, must-haves/avoids
+  - branding.md    → name, tagline, voice, colors, fonts, logo, guardrails
+  - design.md      → reference sites, mood, layout, motion intensity, hero treatment, sections
+  - assets/        → list it; if a logo (logo.svg/png) exists, set brand.logoPath to its relative path and add "logo" to brand.locked
+Also consider this freeform brief (may be empty): """${brief}"""
 
-Decide the business name (infer if not given), the primary goal, target audience, tone, brand direction,
-the list of pages (keep lean — usually just "/" for a one-pager unless the brief needs more), the ordered
-home-page sections, primary SEO keywords, and the top questions real users would ask an AI engine that this
-site should answer (for GEO). Be concrete and opinionated. Output the structured spec.`,
+RULES:
+- Any value the client SUPPLIED (non-empty, not "you decide") is LOCKED — copy it verbatim into brand.* and add its
+  key to brand.locked. The rest of the crew must obey locked values, not reinvent them.
+- For every blank/"you decide" field, leave brand.* empty (the designer fills it) — do NOT guess locked values.
+- Keep pages lean (usually just "/" unless the brief needs more). Always derive SEO keywords + GEO questions.
+
+Output the structured spec, including the resolved brand object and any referenceSites from design.md.`,
   { label: 'strategist', phase: 'Strategy', schema: SPEC_SCHEMA }
 );
+const lockedList = spec?.brand?.locked || [];
+log(`Strategy: ${spec.businessName} | locked brand: ${lockedList.length ? lockedList.join(', ') : 'none (factory designs all)'}${spec?.brand?.logoPath ? ' | logo provided' : ''}`);
 
 // ---- Stage 2: Design (3 variants + judge) ---------------------------------
 phase('Design');
@@ -127,6 +154,15 @@ const designs = (await parallel(
     agent(
       `You are an award-winning art director designing an Awwwards-caliber site. Direction #${i + 1}, angle: "${angle}".
 Business: ${spec.businessName}. Tone: ${spec.tone}. Brand direction: ${spec.brandDirection || 'n/a'}. Audience: ${spec.audience}.
+
+LOCKED BRAND (you MUST obey these — they came from the client; do not change them):
+${(spec.brand?.locked || []).length
+  ? (spec.brand.locked || []).map((k) => `  - ${k}: ${spec.brand[k] ?? (k === 'logo' ? spec.brand.logoPath : '')}`).join('\n')
+  : '  (none — you have full creative freedom on color/type)'}
+Client design cues (honor if present): mood=${spec.brand?.mood || 'open'}, motion=${spec.brand?.motionIntensity || 'your call'}, hero=${spec.brand?.heroTreatment || 'your call'}.
+Reference sites the client likes: ${(spec.referenceSites || []).join(', ') || 'none given'}.
+For any LOCKED color/font, build the full ramp/system AROUND it (e.g. derive brand-50..900 from the locked primary). For
+unlocked fields, design freely.
 
 Aim for Site-of-the-Day craft: a strong, ORIGINAL art direction with a memorable concept — not a template. AVOID all
 generic-AI tells (default purple gradients, Inter everywhere, centered hero + 3 cards). Think distinctive type pairing
@@ -169,6 +205,22 @@ everything must respect prefers-reduced-motion (the primitives already do).`,
   { label: 'interaction-designer', phase: 'Interaction', schema: INTERACTION_SCHEMA }
 );
 log(`Motion concept: ${interaction?.concept} | hero: ${interaction?.heroTreatment}`);
+
+// ---- Stage 2c: Write resolved spec back to the client folder --------------
+// Saves the factory's chosen colors/fonts/motion/hero into branding.md & design.md
+// so the operator can review/tweak and re-run. Provided (locked) values are kept.
+await agent(
+  `Write the RESOLVED brand + design back into the client folder ${DIR} so the operator can approve/tweak it.
+Update (or create) ${DIR}/branding.md and ${DIR}/design.md so every previously-blank field is now filled with the
+chosen value, while keeping any client-provided (locked) values unchanged. Mark generated values with a trailing
+"  <!-- generated -->" comment so the operator can see what to review.
+
+Chosen design: ${JSON.stringify({ name: design?.name, palette: design?.palette, fonts: design?.fonts, hero: design?.heroPrompt })}
+Motion/interaction: ${JSON.stringify(interaction)}
+Locked (keep as-is): ${JSON.stringify(spec.brand?.locked || [])}
+Keep the markdown structure of the existing files; just fill values. This is a quick file-write task.`,
+  { label: 'spec-writeback', phase: 'Interaction' }
+);
 
 // ---- Stage 3: Content (copy + assets in parallel) -------------------------
 phase('Content');
@@ -216,6 +268,9 @@ const buildResult = await agent(
 STEPS:
 1. If ${DIR} doesn't exist, copy the template: cp -R ${TEMPLATE} ${DIR} (preserve any public/ images already generated there).
 2. Edit ${DIR}/site.config.ts with the real business name, url placeholder, description, org details, nav, keywords.
+   LOGO: ${spec.brand?.logoPath
+     ? `the client provided a logo at ${DIR}/${spec.brand.logoPath} — copy it to public/ (e.g. public/logo.svg), use it in Header/Footer, and create a favicon/icon from it (app/icon.png or app/favicon.ico). Seed/confirm the palette from the logo if it makes sense.`
+     : `no logo provided — design a clean, distinctive SVG wordmark/mark for "${spec.businessName}" in the chosen brand colors, save to public/logo.svg, use it in Header/Footer, and add app/icon.svg as the favicon.`}
 3. Replace the @theme block in ${DIR}/app/globals.css with this design's CSS:\n${design?.css || '(use template defaults)'}
 4. Set fonts in ${DIR}/app/layout.tsx to: display=${design?.fonts?.display || 'Sora'}, body=${design?.fonts?.body || 'Inter'} (next/font/google).
 5. Fill every section component and ${DIR}/app/page.tsx with the REAL copy below. Wire the FAQ items (question/answer) so FAQ schema emits. Add pages under app/ if the spec lists more than "/".

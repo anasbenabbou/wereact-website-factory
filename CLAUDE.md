@@ -4,17 +4,30 @@ This project is an **autonomous, multi-agent website factory**. It turns a
 freeform brief into a live, deployed, SEO/GEO-optimized, Awwwards-grade Next.js
 site. Read this fully before acting in this repo.
 
-## How to START a build (the trigger)
-When the operator gives a website brief (or says "build a website…", "run the
-factory", "new client site"), DO THIS:
+## Intake model (folder-based)
+Each client is a folder `clients/<slug>/` scaffolded from `clients/_TEMPLATE/`:
+  - `brief.md` — goal, audience, pages, CTA
+  - `branding.md` — name, voice, colors, fonts, logo, guardrails
+  - `design.md` — references, mood, layout, motion intensity, hero treatment, sections
+  - `assets/` — optional logo (logo.svg/png → used + favicon + palette seed), photos, fonts, copy
+Scaffold a new one: `node new-client.mjs <slug> "Client Name"`.
+**Rule:** values the operator filled in are LOCKED (obeyed); blanks are generated at
+award level and **written back** into branding.md/design.md for approval. Logo is
+used if present in assets/, otherwise the factory designs an SVG wordmark.
 
-1. Derive a short `slug` (e.g. "atlas-coffee") from the brief.
-2. Run the **Workflow tool** with the registered workflow:
+## How to START a build (the trigger)
+When the operator says "build <slug>" / "build a website…" / "run the factory":
+
+1. Determine the `slug`. If `clients/<slug>/` doesn't exist yet, scaffold it
+   (`node new-client.mjs <slug> "Name"`) and ask the operator to fill it in — OR
+   proceed from a freeform brief they gave (the factory fills everything).
+2. Run the **Workflow tool**:
    - `name: "website-factory"` (registered at `~/.claude/workflows/website-factory.mjs`)
-   - `args: { brief: "<the full brief>", slug: "<slug>", clientDir: "/Users/apple/Desktop/wereact-website-factory/clients/<slug>", factoryRoot: "/Users/apple/Desktop/wereact-website-factory" }`
-3. The workflow runs the full crew (Strategy → Design → Interaction → Content →
-   Build → SEO/GEO → Deploy → QA → Fix) and returns a live `*.vercel.app` URL.
-4. Report the preview URL + repo URL. Iterate by re-running with feedback in the brief.
+   - `args: { brief: "<any freeform text, may be empty>", slug: "<slug>", clientDir: "/Users/apple/Desktop/wereact-website-factory/clients/<slug>", factoryRoot: "/Users/apple/Desktop/wereact-website-factory" }`
+   The Strategist reads the folder's md files + assets itself.
+3. Crew runs (Strategy → Design → Interaction → write-back → Content → Build →
+   SEO/GEO → Deploy → QA → Fix) and returns a live `*.vercel.app` URL.
+4. Report preview URL + repo URL. Iterate by editing the folder / feedback and re-running.
 
 The Workflow tool requires explicit user opt-in to multi-agent orchestration —
 the operator asking to build a site IS that opt-in.
