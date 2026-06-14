@@ -142,16 +142,20 @@ labelled sections the builder can copy from.`,
     ),
   () =>
     agent(
-      `You are the asset producer for ${spec.businessName}. Generate the website imagery.
+      `You are the asset producer for ${spec.businessName}. Produce the website imagery using the CHEAPEST capable source per asset type. Save everything into ${DIR}/public/ (create it if missing).
 
-FIRST try the higgsfield MCP tools (search for them with ToolSearch: "higgsfield generate image") for a cinematic hero.
-If higgsfield is unavailable or fails, use the fallback Asset Engine CLI:
-    node ${GENIMG} --prompt "<prompt>" --out ${DIR}/public/hero.png --type hero
-    node ${GENIMG} --prompt "<prompt>" --out ${DIR}/public/og.png --type og
+ASSET STRATEGY (in priority order):
+1. BRAND / ABSTRACT / UI assets (logo, icons, gradient or geometric hero backgrounds, patterns, dividers):
+   generate these YOURSELF as SVG/CSS directly — no API, no cost, fully on-brand. Prefer this for the hero when
+   the design is abstract/gradient (design: "${design?.name}").
+2. PHOTOGRAPHIC assets (real scenes/products/people): use the Asset Engine, which tries free stock first:
+       node ${GENIMG} --prompt "<full description>" --query "<2-5 search keywords>" --out ${DIR}/public/hero.png --type hero
+   It runs pexels → unsplash (free) → together → fal → gemini automatically. Always pass a short --query for good stock matches.
+3. Cinematic/bespoke shots only if needed: try the higgsfield MCP tools (ToolSearch: "higgsfield generate image").
 
-Generate at minimum: a hero background (prompt: "${design?.heroPrompt || 'abstract premium brand background'}") and an
-OpenGraph share image (1200x630, brand-aligned, with the business name). Save them into ${DIR}/public/.
-The ${DIR} directory may not exist yet — create public/ if needed. Report exactly which files you created and via which provider.`,
+Produce at minimum: a hero visual (SVG/CSS or photo per the design) and an OpenGraph image at ${DIR}/public/og.png
+(1200x630, brand-aligned — an SVG/CSS composition with the business name is ideal and free).
+Report each file created and the source used.`,
       { label: 'asset-producer', phase: 'Content' }
     ),
 ]);

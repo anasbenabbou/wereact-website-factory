@@ -4,9 +4,14 @@
  *
  * Provider-agnostic image generator with an automatic fallback chain.
  * higgsfield (cinematic/video) is handled by the asset agent via its MCP tools;
- * THIS tool is the backup chain that runs when higgsfield is unavailable:
+ * THIS tool is the backup chain. Free real-photo providers run first, then the
+ * AI image models (which need credits/billing):
  *
- *     Google Gemini "Nano Banana"  →  FLUX via fal.ai  →  FLUX via Together AI
+ *     Pexels → Unsplash (free stock)  →  Together → fal.ai → Gemini (AI gen)
+ *
+ * Override order with IMAGE_PROVIDER_ORDER. For non-photographic brand assets
+ * (logos, icons, gradients, abstract heroes) the factory generates SVG/CSS
+ * directly — no provider needed.
  *
  * Usage:
  *   node gen-image.mjs --prompt "a cinematic hero shot of ..." --out public/hero.png
@@ -64,14 +69,65 @@ const FAL_SIZE = {
   '16:9': 'landscape_16_9', '1:1': 'square_hd',
   '4:3': 'landscape_4_3', '3:2': 'landscape_4_3', '9:16': 'portrait_16_9',
 };
+// Stock-photo search APIs take an orientation, not exact dimensions.
+const STOCK_ORIENTATION = {
+  '16:9': 'landscape', '4:3': 'landscape', '3:2': 'landscape',
+  '1:1': 'squarish', '9:16': 'portrait',
+};
 
 function resolveAspect(args) {
   if (args.aspect && ASPECT_DIMS[args.aspect]) return args.aspect;
   return TYPE_ASPECT[args.type] || '16:9';
 }
 
+// Stock providers search by keywords; derive a short query from --query or the
+// first ~8 words of the prompt (full AI prompts make poor search queries).
+function resolveQuery(args) {
+  if (args.query) return args.query;
+  return (args.prompt || '').replace(/[.,].*$/, '').split(/\s+/).slice(0, 8).join(' ');
+}
+
 // ---- providers ------------------------------------------------------------
 // Each returns a Buffer of image bytes, or throws.
+// Signature: (prompt, aspect, query) — AI providers use prompt; stock use query.
+
+// Free real photography. Pexels license allows commercial use + self-hosting.
+async function viaPexels(prompt, aspect, query) {
+  const key = process.env.PEXELS_API_KEY;
+  if (!key) throw new Error('PEXELS_API_KEY not set');
+  const orientation = STOCK_ORIENTATION[aspect] === 'squarish' ? 'square' : STOCK_ORIENTATION[aspect] || 'landscape';
+  const url = `https://api.pexels.com/v1/search?query=${encodeURIComponent(query)}&per_page=1&orientation=${orientation}`;
+  const r = await fetch(url, { headers: { authorization: key } });
+  if (!r.ok) throw new Error(`pexels HTTP ${r.status}: ${(await r.text()).slice(0, 200)}`);
+  const j = await r.json();
+  const src = j?.photos?.[0]?.src;
+  const imgUrl = src?.large2x || src?.original || src?.large;
+  if (!imgUrl) throw new Error(`pexels: no photo for "${query}"`);
+  const ir = await fetch(imgUrl);
+  if (!ir.ok) throw new Error(`pexels image download HTTP ${ir.status}`);
+  return Buffer.from(await ir.arrayBuffer());
+}
+
+// Free real photography. Unsplash license allows commercial use + self-hosting.
+async function viaUnsplash(prompt, aspect, query) {
+  const key = process.env.UNSPLASH_ACCESS_KEY;
+  if (!key) throw new Error('UNSPLASH_ACCESS_KEY not set');
+  const orientation = STOCK_ORIENTATION[aspect] || 'landscape';
+  const url = `https://api.unsplash.com/search/photos?query=${encodeURIComponent(query)}&per_page=1&orientation=${orientation}`;
+  const r = await fetch(url, { headers: { authorization: `Client-ID ${key}` } });
+  if (!r.ok) throw new Error(`unsplash HTTP ${r.status}: ${(await r.text()).slice(0, 200)}`);
+  const j = await r.json();
+  const photo = j?.results?.[0];
+  const imgUrl = photo?.urls?.raw ? `${photo.urls.raw}&w=1600&fit=max` : photo?.urls?.full || photo?.urls?.regular;
+  if (!imgUrl) throw new Error(`unsplash: no photo for "${query}"`);
+  // Unsplash API guideline: ping the download endpoint to credit the author.
+  if (photo?.links?.download_location) {
+    fetch(`${photo.links.download_location}&client_id=${key}`).catch(() => {});
+  }
+  const ir = await fetch(imgUrl);
+  if (!ir.ok) throw new Error(`unsplash image download HTTP ${ir.status}`);
+  return Buffer.from(await ir.arrayBuffer());
+}
 
 async function viaGemini(prompt, aspect) {
   const key = process.env.GEMINI_API_KEY;
@@ -125,18 +181,24 @@ async function viaTogether(prompt, aspect) {
   throw new Error('together returned no image');
 }
 
-const PROVIDERS = { gemini: viaGemini, fal: viaFal, together: viaTogether };
-const DEFAULT_ORDER = ['gemini', 'fal', 'together'];
+const PROVIDERS = { pexels: viaPexels, unsplash: viaUnsplash, gemini: viaGemini, fal: viaFal, together: viaTogether };
+// Free-first: real stock photos (no cost) before AI providers (need credits/billing).
+// Override with IMAGE_PROVIDER_ORDER="fal,gemini,..." in the environment.
+const DEFAULT_ORDER = (process.env.IMAGE_PROVIDER_ORDER || 'pexels,unsplash,together,fal,gemini')
+  .split(',')
+  .map((s) => s.trim())
+  .filter(Boolean);
 
 // ---- main -----------------------------------------------------------------
 async function main() {
   loadEnv();
   const args = parseArgs(process.argv.slice(2));
   if (!args.prompt || !args.out) {
-    console.error('Usage: gen-image.mjs --prompt "..." --out path [--type hero|og|square|portrait|icon] [--aspect 16:9] [--provider gemini|fal|together]');
+    console.error('Usage: gen-image.mjs --prompt "..." --out path [--query "short search terms"] [--type hero|og|square|portrait|icon] [--aspect 16:9] [--provider pexels|unsplash|fal|together|gemini]');
     process.exit(2);
   }
   const aspect = resolveAspect(args);
+  const query = resolveQuery(args);
   const order = args.provider ? [args.provider] : DEFAULT_ORDER;
   const errors = [];
 
@@ -144,10 +206,10 @@ async function main() {
     const fn = PROVIDERS[name];
     if (!fn) { errors.push(`${name}: unknown provider`); continue; }
     try {
-      const buf = await fn(args.prompt, aspect);
+      const buf = await fn(args.prompt, aspect, query);
       fs.mkdirSync(path.dirname(path.resolve(args.out)), { recursive: true });
       fs.writeFileSync(args.out, buf);
-      console.log(JSON.stringify({ ok: true, provider: name, path: args.out, aspect, bytes: buf.length }));
+      console.log(JSON.stringify({ ok: true, provider: name, path: args.out, aspect, query, bytes: buf.length }));
       process.exit(0);
     } catch (e) {
       errors.push(`${name}: ${e.message}`);
