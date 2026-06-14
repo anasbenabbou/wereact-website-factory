@@ -266,7 +266,9 @@ const buildResult = await agent(
   `You are the Lead Builder. Assemble the production Next.js site in ${DIR}.
 
 STEPS:
-1. If ${DIR} doesn't exist, copy the template: cp -R ${TEMPLATE} ${DIR} (preserve any public/ images already generated there).
+1. The folder ${DIR} already holds the input files (brief.md, branding.md, design.md, assets/) and possibly generated images in public/. Merge the Next.js template INTO it WITHOUT deleting those:
+     cp -R ${TEMPLATE}/. ${DIR}/
+   (this adds app/, components/, package.json, etc. alongside the existing inputs). Then work inside ${DIR}.
 2. Edit ${DIR}/site.config.ts with the real business name, url placeholder, description, org details, nav, keywords.
    LOGO: ${spec.brand?.logoPath
      ? `the client provided a logo at ${DIR}/${spec.brand.logoPath} — copy it to public/ (e.g. public/logo.svg), use it in Header/Footer, and create a favicon/icon from it (app/icon.png or app/favicon.ico). Seed/confirm the palette from the logo if it makes sense.`
@@ -308,15 +310,21 @@ Report the SEO/GEO changes you made.`,
 // ---- Stage 6: Deploy (GitHub + Vercel preview) ----------------------------
 phase('Deploy');
 const deploy = await agent(
-  `You are the Deployer. Ship ${DIR} to a live Vercel preview.
+  `You are the Deployer. Ship ${DIR} to a live Vercel preview. Use these EXACT pre-configured tools:
 
-1. Initialize git in ${DIR} if needed, commit all.
-2. Create a GitHub repo "${slug}" (private) with the gh CLI (gh is at ~/.local/bin/gh) and push.
-3. Deploy to Vercel — use the Vercel MCP tools (find them via ToolSearch: "vercel deploy project") to create/link the project and deploy, OR the vercel CLI if available. Use the *.vercel.app preview domain (no custom domain).
-4. Set the NEXT_PUBLIC_SITE_URL env var on Vercel to the assigned preview URL and redeploy if needed so canonical/OG URLs are correct.
-5. Return the live preview URL and the repo URL.
+GitHub (already authenticated as user 'anasbenabbou'):
+  - GH=~/.local/bin/gh
+  1. cd ${DIR} && git init -q (if needed) && git add -A && git commit -q -m "Initial site"
+  2. $GH repo create ${slug} --private --source=${DIR} --remote=origin --push   (create + push in one step)
 
-If Vercel or GitHub auth is missing, STOP and clearly report exactly what the operator must authenticate. Do not fake a URL.`,
+Vercel (token is in ${FACTORY}/.env as VERCEL_TOKEN):
+  - VERCEL=${FACTORY}/node_modules/.bin/vercel ; export VERCEL_TELEMETRY_DISABLED=1
+  - TOK=$(grep '^VERCEL_TOKEN=' ${FACTORY}/.env | cut -d= -f2)
+  3. cd ${DIR} && $VERCEL deploy --prod --yes --token "$TOK"   (first run links the project automatically; capture the printed *.vercel.app URL)
+  4. Set the deployed URL as NEXT_PUBLIC_SITE_URL:  $VERCEL env add NEXT_PUBLIC_SITE_URL production --token "$TOK" (value = the URL), then redeploy so canonical/OG URLs are correct. (Optional if it complicates — note it if skipped.)
+  5. Return previewUrl (the *.vercel.app URL) and repoUrl.
+
+If a step genuinely fails on auth, STOP and report exactly what's wrong. Never fabricate a URL — verify it loads.`,
   { label: 'deployer', phase: 'Deploy', schema: DEPLOY_SCHEMA }
 );
 
