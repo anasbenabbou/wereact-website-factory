@@ -16,10 +16,13 @@ export const meta = {
 };
 
 // args: { brief: string, slug: string, clientDir: string, factoryRoot: string }
-const brief = args?.brief || 'A modern marketing website.';
-const slug = args?.slug || 'client-site';
-const FACTORY = args?.factoryRoot || '/Users/apple/Desktop/wereact-website-factory';
-const DIR = args?.clientDir || `${FACTORY}/clients/${slug}`;
+// The Workflow runtime may deliver `args` as a JSON STRING — parse defensively.
+let A = {};
+try { A = typeof args === 'string' ? JSON.parse(args) : (args || {}); } catch { A = {}; }
+const brief = A.brief || 'A modern marketing website.';
+const slug = A.slug || 'client-site';
+const FACTORY = A.factoryRoot || '/Users/apple/Desktop/wereact-website-factory';
+const DIR = A.clientDir || `${FACTORY}/clients/${slug}`;
 const TEMPLATE = `${FACTORY}/template`;
 const GENIMG = `${FACTORY}/tools/gen-image.mjs`;
 const GENVID = `${FACTORY}/tools/gen-video.mjs`;
