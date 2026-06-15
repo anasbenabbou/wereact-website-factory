@@ -13,8 +13,9 @@ dist/
 # os
 .DS_Store
 
-# generated client sites keep their own git; ignore their build artifacts here
-clients/**/node_modules/
-clients/**/.next/
-clients/**/.vercel/
+# generated client sites are self-contained (each gets its OWN git + GitHub repo),
+# so the factory repo doesn't track them — only the _TEMPLATE skeleton.
+clients/*
+!clients/_TEMPLATE/
+!clients/_TEMPLATE/**
 **/.npm-cache/
