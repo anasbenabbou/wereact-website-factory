@@ -3,7 +3,8 @@ export const meta = {
   description: 'Turn a freeform brief into a deployed, SEO/GEO-optimized Next.js website (full agent crew)',
   whenToUse: 'When the operator gives a website brief and wants a finished, deployed *.vercel.app preview',
   phases: [
-    { title: 'Strategy', detail: 'brief → structured spec' },
+    { title: 'Strategy', detail: 'intake.md → structured spec' },
+    { title: 'Research', detail: 'auto-find + distill 10 award sites in the niche' },
     { title: 'Design', detail: '3 award-grade art directions + judge' },
     { title: 'Interaction', detail: 'motion & interaction design spec' },
     { title: 'Content', detail: 'copy + assets (images/video) in parallel' },
@@ -42,7 +43,24 @@ const SPEC_SCHEMA = {
     sections: { type: 'array', items: { type: 'string' }, description: 'home page sections in order' },
     keywords: { type: 'array', items: { type: 'string' }, description: 'primary SEO keywords' },
     geoQuestions: { type: 'array', items: { type: 'string' }, description: 'questions users ask AI engines this site should answer' },
-    referenceSites: { type: 'array', items: { type: 'string' }, description: 'inspiration URLs from design.md, if any' },
+    referenceSites: { type: 'array', items: { type: 'string' }, description: 'inspiration URLs the client gave, if any' },
+    pageStructure: { type: 'string', enum: ['multi-page', 'one-page'], description: 'from intake; default one-page if unclear and few services, else multi-page' },
+    languages: { type: 'array', items: { type: 'string' }, description: 'e.g. ["en"] or ["en","fr"]; multilingual if >1' },
+    contact: {
+      type: 'object',
+      description: 'Contact + booking + socials from intake — render WhatsApp float, social links, contact section.',
+      properties: {
+        whatsapp: { type: 'string', description: 'full intl number digits only, or ""' },
+        phone: { type: 'string' },
+        email: { type: 'string' },
+        address: { type: 'string' },
+        bookingMethod: { type: 'string' },
+        instagram: { type: 'string' },
+        facebook: { type: 'string' },
+        tiktok: { type: 'string' },
+        youtube: { type: 'string' },
+      },
+    },
     brand: {
       type: 'object',
       description: 'Resolved brand. Values from branding.md are LOCKED (obey them); blanks are for the designer to fill.',
@@ -131,24 +149,69 @@ phase('Strategy');
 const spec = await agent(
   `You are the Strategist for a premium web studio. Produce a precise website spec.
 
-FIRST, read the client folder ${DIR} if it exists (use Bash/Read):
-  - brief.md       → goal, audience, pages, CTA, must-haves/avoids
-  - branding.md    → name, tagline, voice, colors, fonts, logo, guardrails
-  - design.md      → reference sites, mood, layout, motion intensity, hero treatment, sections
+FIRST, read the client folder ${DIR} (use Bash/Read):
+  - intake.md      → the single intake form: business, goal/audience, pages & content, CONTACT & booking
+                     (WhatsApp/phone/email/socials), brand, design taste, practical. (Older folders may
+                     instead have brief.md/branding.md/design.md — read those if intake.md is absent.)
   - assets/        → list it; if a logo (logo.svg/png) exists, set brand.logoPath to its relative path and add "logo" to brand.locked
 Also consider this freeform brief (may be empty): """${brief}"""
 
 RULES:
-- Any value the client SUPPLIED (non-empty, not "you decide") is LOCKED — copy it verbatim into brand.* and add its
-  key to brand.locked. The rest of the crew must obey locked values, not reinvent them.
-- For every blank/"you decide" field, leave brand.* empty (the designer fills it) — do NOT guess locked values.
-- Keep pages lean (usually just "/" unless the brief needs more). Always derive SEO keywords + GEO questions.
+- Any value the client SUPPLIED (non-empty, not "you decide") is LOCKED — copy it verbatim (into brand.*, contact.*,
+  pageStructure, languages) and add brand keys to brand.locked. The crew must obey locked values, not reinvent them.
+- For every blank/"you decide" brand field, leave brand.* empty (the designer fills it) — do NOT guess locked values.
+- contact.*: copy exactly what's given (normalize whatsapp to digits only, with country code). Leave "" if absent.
+- pageStructure: use the form's choice; if "you decide", pick multi-page when there are many tours/services, else one-page.
+- languages: from the form (default ["en"] if unspecified).
+- Always derive SEO keywords + GEO questions.
 
-Output the structured spec, including the resolved brand object and any referenceSites from design.md.`,
+Output the structured spec — resolved brand, contact, pageStructure, languages, and any client referenceSites.`,
   { label: 'strategist', phase: 'Strategy', schema: SPEC_SCHEMA }
 );
 const lockedList = spec?.brand?.locked || [];
 log(`Strategy: ${spec.businessName} | locked brand: ${lockedList.length ? lockedList.join(', ') : 'none (factory designs all)'}${spec?.brand?.logoPath ? ' | logo provided' : ''}`);
+
+// ---- Stage 1b: Inspiration Research (auto) --------------------------------
+// Web-search ~10 award-winning / premium sites in the niche, study them, distill
+// WHY they look premium into a reusable design-context the designers must honor.
+phase('Research');
+const RESEARCH_SCHEMA = {
+  type: 'object',
+  required: ['references', 'principles'],
+  properties: {
+    references: {
+      type: 'array',
+      description: '8-12 premium/award sites found',
+      items: {
+        type: 'object',
+        required: ['url', 'whyPremium'],
+        properties: { url: { type: 'string' }, name: { type: 'string' }, whyPremium: { type: 'string' } },
+      },
+    },
+    principles: {
+      type: 'array', items: { type: 'string' },
+      description: 'concrete, reusable design rules distilled from the references (layout, type, color, spacing, motion, imagery, sections)',
+    },
+    paletteIdeas: { type: 'array', items: { type: 'string' } },
+    layoutPatterns: { type: 'array', items: { type: 'string' } },
+    summary: { type: 'string', description: 'a tight art-direction brief grounded in the references' },
+  },
+};
+const research = await agent(
+  `You are a design researcher. Find what PREMIUM looks like for: ${spec.businessName} — ${spec.goal}. Niche/audience: ${spec.audience}.
+Client reference sites (if any): ${(spec.referenceSites || []).join(', ') || 'none'}.
+
+1. Use WebSearch (find it via ToolSearch: "web search") to find ~10 award-winning / premium websites in this niche and adjacent ones.
+   Good queries: "best ${spec.businessName.split(' ')[0]} websites awwwards", "<niche> site of the day awwwards", "premium <niche> web design", and search awwwards.com / godly.website / land-book.com / lapa.ninja.
+2. Pick the 8-12 strongest. For a few of the best, use WebFetch to study them.
+3. Distill WHY they read as premium into concrete, reusable PRINCIPLES (layout systems, type scale & pairing, color use,
+   spacing/whitespace, motion, imagery treatment, section patterns) — rules the designer can apply.
+4. Write the findings to ${DIR}/design-context.md (references + principles + a tight art-direction summary).
+
+Return the structured research. Be specific and opinionated — this is the taste benchmark the build must hit.`,
+  { label: 'design-researcher', phase: 'Research', schema: RESEARCH_SCHEMA }
+);
+log(`Research: ${research?.references?.length || 0} premium references, ${research?.principles?.length || 0} design principles distilled`);
 
 // ---- Stage 2: Design (3 variants + judge) ---------------------------------
 phase('Design');
@@ -163,7 +226,13 @@ ${(spec.brand?.locked || []).length
   ? (spec.brand.locked || []).map((k) => `  - ${k}: ${spec.brand[k] ?? (k === 'logo' ? spec.brand.logoPath : '')}`).join('\n')
   : '  (none — you have full creative freedom on color/type)'}
 Client design cues (honor if present): mood=${spec.brand?.mood || 'open'}, motion=${spec.brand?.motionIntensity || 'your call'}, hero=${spec.brand?.heroTreatment || 'your call'}.
-Reference sites the client likes: ${(spec.referenceSites || []).join(', ') || 'none given'}.
+
+INSPIRATION RESEARCH — hit this premium benchmark (auto-found award sites in the niche):
+Summary: ${research?.summary || 'n/a'}
+Principles to apply:
+${(research?.principles || []).map((p) => `  • ${p}`).join('\n') || '  • (use your best award-grade judgement)'}
+Reference sites: ${(research?.references || []).slice(0, 8).map((r) => r.url).join(', ') || (spec.referenceSites || []).join(', ') || 'none'}
+Compose using the template's premium component kit (BentoGrid, TiltCard, Marquee, Spotlight, InfiniteMovingCards, ShimmerButton, AnimatedGradientText).
 For any LOCKED color/font, build the full ramp/system AROUND it (e.g. derive brand-50..900 from the locked primary). For
 unlocked fields, design freely.
 
@@ -213,15 +282,15 @@ log(`Motion concept: ${interaction?.concept} | hero: ${interaction?.heroTreatmen
 // Saves the factory's chosen colors/fonts/motion/hero into branding.md & design.md
 // so the operator can review/tweak and re-run. Provided (locked) values are kept.
 await agent(
-  `Write the RESOLVED brand + design back into the client folder ${DIR} so the operator can approve/tweak it.
-Update (or create) ${DIR}/branding.md and ${DIR}/design.md so every previously-blank field is now filled with the
-chosen value, while keeping any client-provided (locked) values unchanged. Mark generated values with a trailing
-"  <!-- generated -->" comment so the operator can see what to review.
+  `Write the RESOLVED brand + design spec to ${DIR}/brand-spec.md so the operator can review/approve the factory's choices.
+Include: final brand name/tagline, full color palette (brand-50..900, ink, paper), display + body fonts, the chosen
+art-direction concept + rationale, hero treatment, the motion/interaction plan, page structure, languages, and the
+contact/social set. Clearly mark which values were CLIENT-PROVIDED (locked) vs FACTORY-GENERATED.
 
 Chosen design: ${JSON.stringify({ name: design?.name, palette: design?.palette, fonts: design?.fonts, hero: design?.heroPrompt })}
 Motion/interaction: ${JSON.stringify(interaction)}
-Locked (keep as-is): ${JSON.stringify(spec.brand?.locked || [])}
-Keep the markdown structure of the existing files; just fill values. This is a quick file-write task.`,
+Locked: ${JSON.stringify(spec.brand?.locked || [])}  | pageStructure: ${spec.pageStructure} | languages: ${JSON.stringify(spec.languages || ['en'])}
+Reference design-context.md already exists in the folder. This is a quick file-write task.`,
   { label: 'spec-writeback', phase: 'Interaction' }
 );
 
@@ -272,7 +341,13 @@ STEPS:
 1. The folder ${DIR} already holds the input files (brief.md, branding.md, design.md, assets/) and possibly generated images in public/. Merge the Next.js template INTO it WITHOUT deleting those:
      cp -R ${TEMPLATE}/. ${DIR}/
    (this adds app/, components/, package.json, etc. alongside the existing inputs). Then work inside ${DIR}.
-2. Edit ${DIR}/site.config.ts with the real business name, url placeholder, description, org details, nav, keywords.
+2. Edit ${DIR}/site.config.ts: business name, url placeholder, description, org details, nav, keywords, AND the contact block
+   from the spec: ${JSON.stringify(spec.contact || {})} → site.config.contact (whatsapp digits-only, phone, email, address,
+   socials). This auto-enables the floating WhatsApp button + footer social links + contact details. If a WhatsApp number
+   exists, also make the primary CTA "Book on WhatsApp" link to it.
+   PAGE STRUCTURE = "${spec.pageStructure || 'one-page'}": one-page → single scroll with anchor nav; multi-page → create
+   routes under app/ (e.g. /tours, /tours/[slug], /about, /contact) with shared Header/Footer. LANGUAGES = ${JSON.stringify(spec.languages || ['en'])}
+   (if >1, set up a simple language structure; otherwise single language).
    LOGO: ${spec.brand?.logoPath
      ? `the client provided a logo at ${DIR}/${spec.brand.logoPath} — copy it to public/ (e.g. public/logo.svg), use it in Header/Footer, and create a favicon/icon from it (app/icon.png or app/favicon.ico). Seed/confirm the palette from the logo if it makes sense.`
      : `no logo provided — design a clean, distinctive SVG wordmark/mark for "${spec.businessName}" in the chosen brand colors, save to public/logo.svg, use it in Header/Footer, and add app/icon.svg as the favicon.`}

@@ -43,6 +43,6 @@ function copy(from, to) {
 copy(src, dest);
 
 console.log(`✓ Created clients/${slug}/`);
-console.log(`  Fill in brief.md / branding.md / design.md (blanks are auto-generated).`);
+console.log(`  Fill in intake.md (blanks are auto-generated at award level).`);
 console.log(`  Optional: drop a logo + photos in clients/${slug}/assets/`);
 console.log(`  Then tell Claude:  build ${slug}`);

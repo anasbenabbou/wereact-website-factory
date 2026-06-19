@@ -5,6 +5,7 @@ import { pageMetadata } from '@/lib/seo';
 import { Schema, organizationSchema, websiteSchema } from '@/components/Schema';
 import { SmoothScroll } from '@/components/ui/SmoothScroll';
 import { Cursor } from '@/components/ui/Cursor';
+import { WhatsAppFloat } from '@/components/site/WhatsAppFloat';
 
 // The factory swaps these fonts per design direction.
 const sans = Inter({ subsets: ['latin'], variable: '--font-sans-stack', display: 'swap' });
@@ -20,6 +21,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <Schema json={[organizationSchema(), websiteSchema()]} />
         <Cursor />
         <SmoothScroll>{children}</SmoothScroll>
+        <WhatsAppFloat />
       </body>
     </html>
   );

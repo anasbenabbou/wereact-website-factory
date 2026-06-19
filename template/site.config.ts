@@ -21,6 +21,20 @@ export const site = {
     sameAs: [] as string[], // social profile URLs — strengthens entity graph
     contact: { email: '', telephone: '', areaServed: '' },
   },
+  // Contact + booking + socials — drive the WhatsApp float, social links, contact section.
+  contact: {
+    whatsapp: '', // intl digits only, e.g. "212600000000" — empty hides the float button
+    whatsappMessage: 'Hi! I’d like to know more.',
+    phone: '',
+    email: '',
+    address: '',
+    socials: {
+      instagram: '', // full URL
+      facebook: '',
+      tiktok: '',
+      youtube: '',
+    },
+  },
   nav: [
     { label: 'Home', href: '/' },
   ],
