@@ -18,7 +18,16 @@ All reduced-motion safe, Tailwind v4 + framer-motion, brand-token aware.
 `PageTransition`, `Reveal`. See template README.
 
 ## Visual (`@/components/visual/`)
-`ShaderHeroClient` (WebGL gradient), `BgVideo` (lazy video bg), `Lottie`.
+- `ShaderHeroClient` — lightweight WebGL gradient (template's own shader)
+- `ShaderGradientHero` — **shadergradient.co** animated gradient (premium, brand colors) — `colors={[brand600,brand400,brand900]}`, `type` plane|sphere|waterPlane
+- `BgVideo` — lazy, poster-first background video
+- `Lottie` — lazy vector animation
+(All dynamic / ssr:false / reduced-motion safe.)
+
+## Inspiration galleries (the Research stage studies these)
+- **supahero.io** — best hero sections; study for the hero composition
+- **dark.design** — premium dark-theme sites (use when the brief is dark/cinematic)
+- awwwards.com · godly.website · land-book.com · lapa.ninja
 
 ## Base UI (`@/components/ui/button`)
 shadcn-style `Button` (variants: default/outline/ghost/white). Add more shadcn

@@ -104,7 +104,7 @@ const INTERACTION_SCHEMA = {
   required: ['concept', 'heroTreatment', 'interactions'],
   properties: {
     concept: { type: 'string', description: 'the motion concept / signature moment' },
-    heroTreatment: { type: 'string', enum: ['shader', 'video', 'image', 'split'], description: 'hero background approach' },
+    heroTreatment: { type: 'string', enum: ['shader', 'gradient', 'video', 'image', 'split'], description: 'hero background: shader=template WebGL gradient · gradient=shadergradient.co animated gradient (premium) · video · image · split' },
     interactions: {
       type: 'array',
       description: 'specific motions to implement using the template kit',
@@ -202,8 +202,11 @@ const research = await agent(
 Client reference sites (if any): ${(spec.referenceSites || []).join(', ') || 'none'}.
 
 1. Use WebSearch (find it via ToolSearch: "web search") to find ~10 award-winning / premium websites in this niche and adjacent ones.
-   Good queries: "best ${spec.businessName.split(' ')[0]} websites awwwards", "<niche> site of the day awwwards", "premium <niche> web design", and search awwwards.com / godly.website / land-book.com / lapa.ninja.
-2. Pick the 8-12 strongest. For a few of the best, use WebFetch to study them.
+   Good queries: "best ${spec.businessName.split(' ')[0]} websites awwwards", "<niche> site of the day awwwards", "premium <niche> web design".
+   Curated galleries to draw from: awwwards.com, godly.website, land-book.com, lapa.ninja,
+   **supahero.io** (best-in-class HERO sections — always study this for the hero), and
+   **dark.design** (premium dark-theme sites — prioritize when the brief wants a dark/cinematic look).
+2. Pick the 8-12 strongest. For a few of the best, use WebFetch to study them. Capture at least one standout HERO pattern (from supahero or the references) to inform the hero design.
 3. Distill WHY they read as premium into concrete, reusable PRINCIPLES (layout systems, type scale & pairing, color use,
    spacing/whitespace, motion, imagery treatment, section patterns) — rules the designer can apply.
 4. Write the findings to ${DIR}/design-context.md (references + principles + a tight art-direction summary).
@@ -357,7 +360,7 @@ STEPS:
    PREMIUM CRAFT: read ${DIR}/DESIGN-RESOURCES.md and COMPOSE the sections from the premium kit in ${DIR}/components/premium/ instead of plain divs — e.g. BentoGrid/BentoCard for features, TiltCard for tour cards, InfiniteMovingCards for testimonials, Marquee for logos/tags, Spotlight on the hero/CTA, ShimmerButton or AnimatedGradientText for accents. Use lucide-react icons. This is what makes it look expensive — use it generously but tastefully. Prefer characterful premium fonts (Fontshare: Satoshi/Clash Display/General Sans, or a strong Google pairing) over default Inter.
    For a bespoke component the kit doesn't cover, you may use the 21st.dev Magic MCP (ToolSearch: "magic component") to generate one.
 6. HERO: implement the chosen treatment "${interaction?.heroTreatment || 'shader'}" —
-   shader → leave <Hero/> default (ShaderHeroClient); image → <Hero image="/hero.png"/>; video → use <BgVideo src="/hero.mp4" poster="/hero-poster.jpg"/> inside the hero; split → split-screen layout.
+   shader → template default (ShaderHeroClient); gradient → <ShaderGradientHero colors={[brand600, brand400, brand900]} /> from components/visual (premium shadergradient.co animated gradient); image → <Hero image="/hero.png"/>; video → <BgVideo src="/hero.mp4" poster="/hero-poster.jpg"/>; split → split-screen layout. Take the hero's composition/energy from the standout hero pattern the research stage captured (supahero/references).
 7. MOTION: implement the interaction spec using the template kit (already wired: SmoothScroll + Cursor global, PageTransition via template.tsx). Apply per the spec:
 ${(interaction?.interactions || []).map((x) => `   - ${x.where}: ${x.effect} [${x.component}]`).join('\n') || '   - tasteful scroll reveals + magnetic CTAs'}
    Use SplitText for big headlines, Magnetic on primary CTAs, Parallax on hero/media, Reveal on sections. Keep it tasteful — restraint reads premium. Everything must respect reduced-motion (primitives already do).
