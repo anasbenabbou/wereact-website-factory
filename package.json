@@ -8,6 +8,7 @@
     "new-client": "node new-client.mjs"
   },
   "devDependencies": {
+    "@21st-dev/magic": "^0.1.0",
     "chrome-devtools-mcp": "^0.2.6",
     "lighthouse": "^12.8.2",
     "vercel": "^54.14.0"
