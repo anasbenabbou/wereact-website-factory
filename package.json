@@ -1,0 +1,14 @@
+{
+  "name": "wereact-website-factory",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Factory tooling (deploy + audit CLIs). Client sites are built in clients/<slug>/ from template/.",
+  "type": "module",
+  "scripts": {
+    "new-client": "node new-client.mjs"
+  },
+  "devDependencies": {
+    "lighthouse": "^12.8.2",
+    "vercel": "^54.14.0"
+  }
+}
