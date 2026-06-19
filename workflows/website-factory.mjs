@@ -279,6 +279,8 @@ STEPS:
 3. Replace the @theme block in ${DIR}/app/globals.css with this design's CSS:\n${design?.css || '(use template defaults)'}
 4. Set fonts in ${DIR}/app/layout.tsx to: display=${design?.fonts?.display || 'Sora'}, body=${design?.fonts?.body || 'Inter'} (next/font/google).
 5. Fill every section component and ${DIR}/app/page.tsx with the REAL copy below. Wire the FAQ items (question/answer) so FAQ schema emits. Add pages under app/ if the spec lists more than "/".
+   PREMIUM CRAFT: read ${DIR}/DESIGN-RESOURCES.md and COMPOSE the sections from the premium kit in ${DIR}/components/premium/ instead of plain divs — e.g. BentoGrid/BentoCard for features, TiltCard for tour cards, InfiniteMovingCards for testimonials, Marquee for logos/tags, Spotlight on the hero/CTA, ShimmerButton or AnimatedGradientText for accents. Use lucide-react icons. This is what makes it look expensive — use it generously but tastefully. Prefer characterful premium fonts (Fontshare: Satoshi/Clash Display/General Sans, or a strong Google pairing) over default Inter.
+   For a bespoke component the kit doesn't cover, you may use the 21st.dev Magic MCP (ToolSearch: "magic component") to generate one.
 6. HERO: implement the chosen treatment "${interaction?.heroTreatment || 'shader'}" —
    shader → leave <Hero/> default (ShaderHeroClient); image → <Hero image="/hero.png"/>; video → use <BgVideo src="/hero.mp4" poster="/hero-poster.jpg"/> inside the hero; split → split-screen layout.
 7. MOTION: implement the interaction spec using the template kit (already wired: SmoothScroll + Cursor global, PageTransition via template.tsx). Apply per the spec:
@@ -342,15 +344,16 @@ phase('QA');
 const lenses = [
   { key: 'layout', prompt: 'visual layout, spacing, hierarchy, alignment, and any AI-slop/generic patterns' },
   { key: 'responsive', prompt: 'responsive behavior at mobile (375), tablet (768), desktop (1440) — overflow, broken grids, tap targets' },
-  { key: 'performance', prompt: 'performance: run Lighthouse, check LCP/CLS/INP, image/video sizing, font loading; target 85+ (balanced)' },
-  { key: 'a11y', prompt: 'accessibility: semantic HTML, landmarks, contrast, alt text, focus order, keyboard nav, reduced-motion honored' },
-  { key: 'award-craft', prompt: 'Awwwards-level craft: is the art direction distinctive (not generic-AI)? Do the motion/interactions feel intentional and smooth? Is there a memorable signature moment? Rate as if judging for Site of the Day and list what would hold it back' },
+  { key: 'performance', prompt: `performance: run the real Lighthouse CLI — \`${FACTORY}/node_modules/.bin/lighthouse ${'${URL}'} --quiet --chrome-flags="--headless" --only-categories=performance,seo,best-practices,accessibility --output=json --output-path=/tmp/lh-${slug}.json\` then read the scores. Also use the Chrome DevTools MCP (ToolSearch: "chrome devtools performance trace") for LCP/CLS/INP detail. Check image/video sizing + font loading. Target 90+ on each category (95+ ideal)` },
+  { key: 'a11y', prompt: 'accessibility: semantic HTML, landmarks, contrast, alt text, focus order, keyboard nav, reduced-motion honored (cross-check the Lighthouse a11y score)' },
+  { key: 'award-craft', prompt: 'Awwwards-level craft: is the art direction distinctive (not generic-AI)? Are the premium components (bento, tilt, marquee, spotlight) used well? Do motion/interactions feel intentional and smooth? Is there a memorable signature moment? Rate as if judging for Site of the Day and list what would hold it back' },
 ];
 const qa = (await parallel(
   lenses.map((l) => () =>
     agent(
-      `You are a QA engineer reviewing the live site ${deploy.previewUrl} through ONE lens: ${l.key}.
-Use the gstack browse/qa skill (a real headless browser) to inspect ${l.prompt}.
+      `You are a QA engineer reviewing the live site ${deploy.previewUrl} (URL) through ONE lens: ${l.key}.
+Inspect: ${l.prompt.replace('${URL}', deploy.previewUrl)}
+Use the Chrome DevTools MCP and/or the gstack browse skill (real headless browser) as needed.
 Report concrete findings with severity (blocker/major/minor) and the precise fix. Set pass=true only if no blocker/major issues for this lens.`,
       { label: `qa:${l.key}`, phase: 'QA', schema: QA_SCHEMA }
     )

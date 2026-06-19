@@ -20,6 +20,29 @@
 
   --font-sans: var(--font-sans-stack), ui-sans-serif, system-ui, sans-serif;
   --font-display: var(--font-display-stack), var(--font-sans-stack), sans-serif;
+
+  /* Animations for the premium component kit (Marquee, ShimmerButton, etc.) */
+  --animate-marquee: marquee var(--duration, 40s) linear infinite;
+  --animate-marquee-vertical: marquee-vertical var(--duration, 40s) linear infinite;
+  --animate-spin-around: spin-around 6s linear infinite;
+  --animate-gradient-x: gradient-x 4s ease infinite;
+}
+
+@keyframes marquee {
+  from { transform: translateX(0); }
+  to { transform: translateX(calc(-100% - var(--gap, 1.5rem))); }
+}
+@keyframes marquee-vertical {
+  from { transform: translateY(0); }
+  to { transform: translateY(calc(-100% - var(--gap, 1.5rem))); }
+}
+@keyframes spin-around {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+@keyframes gradient-x {
+  0%, 100% { background-position: 0% center; }
+  50% { background-position: 200% center; }
 }
 
 :root {
