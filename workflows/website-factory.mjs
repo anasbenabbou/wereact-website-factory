@@ -413,11 +413,11 @@ STEPS:
 4. Set fonts in ${DIR}/app/layout.tsx to: display=${design?.fonts?.display || 'Sora'}, body=${design?.fonts?.body || 'Inter'} (next/font/google).
 5. Fill every section component and ${DIR}/app/page.tsx with the REAL copy below. Wire the FAQ items (question/answer) so FAQ schema emits. Add pages under app/ if the spec lists more than "/".
    PREMIUM CRAFT: read ${DIR}/DESIGN-RESOURCES.md and COMPOSE the sections from the premium kit in ${DIR}/components/premium/ instead of plain divs — e.g. BentoGrid/BentoCard for features, TiltCard for tour cards, InfiniteMovingCards for testimonials, Marquee for logos/tags, Spotlight on the hero/CTA, ShimmerButton or AnimatedGradientText for accents. Use lucide-react icons. This is what makes it look expensive — use it generously but tastefully. Prefer characterful premium fonts (Fontshare: Satoshi/Clash Display/General Sans, or a strong Google pairing) over default Inter.
-   For a bespoke component the kit doesn't cover, you may use the 21st.dev Magic MCP (ToolSearch: "magic component") to generate one.
+   REQUIRED — BESPOKE COMPONENTS (this is what stops every site looking the same): generate AT LEAST 1-2 SIGNATURE components for THIS brand with the 21st.dev Magic MCP (ToolSearch: "magic component" or "21st magic"; call its create/generate tool) — e.g. the hero, a product/feature showcase, or a standout section — and wire them in. Do NOT rely only on the shared pre-built kit. If Magic genuinely fails, say so explicitly in your report (don't silently skip).
    USE THE REAL DATA: build the tour/service cards (and any tours/[slug] detail pages) from spec.offerings (${(spec.offerings || []).length} items: ${(spec.offerings || []).map((o) => o.name).filter(Boolean).join(', ') || 'none — generate sensible ones'}); build the "why us"/stats section from spec.trust (${JSON.stringify(spec.trust || {})}). Never leave lorem/placeholder text.
 6. HERO: implement the chosen treatment "${interaction?.heroTreatment || 'shader'}" —
    shader → template default (ShaderHeroClient); gradient → <ShaderGradientHero colors={[brand600, brand400, brand900]} /> from components/visual (premium shadergradient.co animated gradient); image → <Hero image="/hero.png"/>; video → <BgVideo src="/hero.mp4" poster="/hero-poster.jpg"/>; split → split-screen layout. Take the hero's composition/energy from the standout hero pattern the research stage captured (supahero/references).
-6b. DESIGN LANGUAGE: follow the unique shape/button/motion language from brand-spec.md + the chosen design — apply the SPECIFIC border-radius scale (don't default to rounded-2xl everywhere), the bespoke button style, and a non-generic section structure. Read ${DIR}/DESIGN-RESOURCES.md for the full component vocabulary. Use the ADVANCED motion modules (@/components/motion: ScrollScrubVideo, ImageSequence, PinnedHorizontal, StickyStack, Counter) for storytelling where the design calls for it — e.g. PinnedHorizontal for a tours/fleet/gallery strip, StickyStack for process/features, Counter for stats, ImageSequence/ScrollScrubVideo for a product/hero reveal. Do NOT apply the same fade-up to everything.
+6b. DESIGN LANGUAGE: follow the unique shape/button/motion language from brand-spec.md + the chosen design — apply the SPECIFIC border-radius scale (don't default to rounded-2xl everywhere), the bespoke button style, and a non-generic section structure. Read ${DIR}/DESIGN-RESOURCES.md for the full component vocabulary. REQUIRED — use AT LEAST 2 of the ADVANCED motion modules (@/components/motion: ScrollScrubVideo, ImageSequence, PinnedHorizontal, StickyStack, Counter) for real scroll storytelling — e.g. PinnedHorizontal for a tours/fleet/gallery strip, StickyStack for process/features, Counter for stats, ImageSequence/ScrollScrubVideo for a product/hero reveal. Do NOT apply the same fade-up to everything.
 7. MOTION: implement the interaction spec using the template kit (already wired: SmoothScroll + Cursor global, PageTransition via template.tsx). Apply per the spec:
 ${(interaction?.interactions || []).map((x) => `   - ${x.where}: ${x.effect} [${x.component}]`).join('\n') || '   - tasteful scroll reveals + magnetic CTAs'}
    Use SplitText for big headlines, Magnetic on primary CTAs, Parallax on hero/media, Reveal on sections. Keep it tasteful — restraint reads premium. Everything must respect reduced-motion (primitives already do).
@@ -427,7 +427,13 @@ COPY TO USE:\n${copy || '(write sensible real copy from the spec)'}
 
 SPEC: ${JSON.stringify(spec)}
 
-Do not finish until \`npm run build\` exits 0. Report what you built and the final build status.`,
+COMPLETION GATE — before you finish, confirm ALL of these in your report (this is mandatory; the QA stage checks it):
+  [ ] used the premium component kit (BentoGrid/TiltCard/Marquee/Spotlight/etc.)
+  [ ] generated ≥1-2 SIGNATURE components via the 21st.dev Magic MCP (or explicitly explained why it failed)
+  [ ] used ≥2 advanced motion modules from @/components/motion
+  [ ] applied a brand-specific radius/button/motion language (not template defaults)
+  [ ] real content from spec.offerings/spec.trust (no lorem)
+Do not finish until \`npm run build\` exits 0 AND the checklist is satisfied. Report what you built, which Magic components + motion modules you used, and the final build status.`,
   { label: 'lead-builder', phase: 'Build' }
 );
 
@@ -485,7 +491,7 @@ const lenses = [
   { key: 'responsive', prompt: 'responsive behavior at mobile (375), tablet (768), desktop (1440) — overflow, broken grids, tap targets' },
   { key: 'performance', prompt: `performance: run the real Lighthouse CLI — \`${FACTORY}/node_modules/.bin/lighthouse ${'${URL}'} --quiet --chrome-flags="--headless" --only-categories=performance,seo,best-practices,accessibility --output=json --output-path=/tmp/lh-${slug}.json\` then read the scores. Also use the Chrome DevTools MCP (ToolSearch: "chrome devtools performance trace") for LCP/CLS/INP detail. Check image/video sizing + font loading. Target 90+ on each category (95+ ideal)` },
   { key: 'a11y', prompt: 'accessibility: semantic HTML, landmarks, contrast, alt text, focus order, keyboard nav, reduced-motion honored (cross-check the Lighthouse a11y score)' },
-  { key: 'award-craft', prompt: 'Awwwards-level craft: is the art direction distinctive (not generic-AI)? Are the premium components (bento, tilt, marquee, spotlight) used well? Do motion/interactions feel intentional and smooth? Is there a memorable signature moment? Rate as if judging for Site of the Day and list what would hold it back' },
+  { key: 'award-craft', prompt: 'Awwwards-level craft: is the art direction distinctive (not generic-AI)? VERIFY the build actually used (a) ≥1-2 21st.dev Magic-generated bespoke components and (b) ≥2 advanced scroll-motion modules (ScrollScrubVideo/ImageSequence/PinnedHorizontal/StickyStack/Counter) — grep the code if needed; if it is just stock images + uniform fade-ups, that is a MAJOR finding. Do motion/interactions feel intentional? Is there a memorable signature moment? Rate as if judging for Site of the Day and list what would hold it back' },
 ];
 const qa = (await parallel(
   lenses.map((l) => () =>
