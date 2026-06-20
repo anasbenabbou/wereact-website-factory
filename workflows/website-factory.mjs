@@ -41,6 +41,32 @@ const SPEC_SCHEMA = {
     brandDirection: { type: 'string', description: 'colors, mood, personality' },
     pages: { type: 'array', items: { type: 'string' } },
     sections: { type: 'array', items: { type: 'string' }, description: 'home page sections in order' },
+    offerings: {
+      type: 'array',
+      description: 'products/services/tours from intake (§3) — real content for cards/detail pages',
+      items: {
+        type: 'object',
+        properties: {
+          name: { type: 'string' },
+          duration: { type: 'string' },
+          price: { type: 'string' },
+          oneLiner: { type: 'string' },
+          highlights: { type: 'array', items: { type: 'string' } },
+          included: { type: 'string' },
+        },
+      },
+    },
+    trust: {
+      type: 'object',
+      description: 'credibility signals from intake (§4) — power "why us", stats, badges',
+      properties: {
+        founded: { type: 'string' },
+        stats: { type: 'array', items: { type: 'string' }, description: 'e.g. "2,000+ trips", "4.9★ (600 reviews)"' },
+        awards: { type: 'array', items: { type: 'string' } },
+        guarantees: { type: 'array', items: { type: 'string' } },
+      },
+    },
+    makePublic: { type: 'boolean', description: 'intake §11 "Make deployment public?" — if true, deployment protection should be off' },
     keywords: { type: 'array', items: { type: 'string' }, description: 'primary SEO keywords' },
     geoQuestions: { type: 'array', items: { type: 'string' }, description: 'questions users ask AI engines this site should answer' },
     referenceSites: { type: 'array', items: { type: 'string' }, description: 'inspiration URLs the client gave, if any' },
@@ -163,9 +189,12 @@ RULES:
 - contact.*: copy exactly what's given (normalize whatsapp to digits only, with country code). Leave "" if absent.
 - pageStructure: use the form's choice; if "you decide", pick multi-page when there are many tours/services, else one-page.
 - languages: from the form (default ["en"] if unspecified).
+- Extract §3 offerings (name/duration/price/oneLiner/highlights/included) into spec.offerings, and §4 credibility into
+  spec.trust (founded/stats/awards/guarantees) — verbatim where given, sensibly generated where blank.
+- Set spec.makePublic from §11 "Make deployment public?" (true if yes).
 - Always derive SEO keywords + GEO questions.
 
-Output the structured spec — resolved brand, contact, pageStructure, languages, and any client referenceSites.`,
+Output the structured spec — resolved brand, contact, offerings, trust, pageStructure, languages, makePublic, referenceSites.`,
   { label: 'strategist', phase: 'Strategy', schema: SPEC_SCHEMA }
 );
 if (!spec) {
@@ -370,6 +399,7 @@ STEPS:
 5. Fill every section component and ${DIR}/app/page.tsx with the REAL copy below. Wire the FAQ items (question/answer) so FAQ schema emits. Add pages under app/ if the spec lists more than "/".
    PREMIUM CRAFT: read ${DIR}/DESIGN-RESOURCES.md and COMPOSE the sections from the premium kit in ${DIR}/components/premium/ instead of plain divs — e.g. BentoGrid/BentoCard for features, TiltCard for tour cards, InfiniteMovingCards for testimonials, Marquee for logos/tags, Spotlight on the hero/CTA, ShimmerButton or AnimatedGradientText for accents. Use lucide-react icons. This is what makes it look expensive — use it generously but tastefully. Prefer characterful premium fonts (Fontshare: Satoshi/Clash Display/General Sans, or a strong Google pairing) over default Inter.
    For a bespoke component the kit doesn't cover, you may use the 21st.dev Magic MCP (ToolSearch: "magic component") to generate one.
+   USE THE REAL DATA: build the tour/service cards (and any tours/[slug] detail pages) from spec.offerings (${(spec.offerings || []).length} items: ${(spec.offerings || []).map((o) => o.name).filter(Boolean).join(', ') || 'none — generate sensible ones'}); build the "why us"/stats section from spec.trust (${JSON.stringify(spec.trust || {})}). Never leave lorem/placeholder text.
 6. HERO: implement the chosen treatment "${interaction?.heroTreatment || 'shader'}" —
    shader → template default (ShaderHeroClient); gradient → <ShaderGradientHero colors={[brand600, brand400, brand900]} /> from components/visual (premium shadergradient.co animated gradient); image → <Hero image="/hero.png"/>; video → <BgVideo src="/hero.mp4" poster="/hero-poster.jpg"/>; split → split-screen layout. Take the hero's composition/energy from the standout hero pattern the research stage captured (supahero/references).
 7. MOTION: implement the interaction spec using the template kit (already wired: SmoothScroll + Cursor global, PageTransition via template.tsx). Apply per the spec:
@@ -416,7 +446,11 @@ Vercel (token is in ${FACTORY}/.env as VERCEL_TOKEN):
   - TOK=$(grep '^VERCEL_TOKEN=' ${FACTORY}/.env | cut -d= -f2)
   3. cd ${DIR} && $VERCEL deploy --prod --yes --token "$TOK"   (first run links the project automatically; capture the printed *.vercel.app URL)
   4. Set the deployed URL as NEXT_PUBLIC_SITE_URL:  $VERCEL env add NEXT_PUBLIC_SITE_URL production --token "$TOK" (value = the URL), then redeploy so canonical/OG URLs are correct. (Optional if it complicates — note it if skipped.)
-  5. Return previewUrl (the *.vercel.app URL) and repoUrl.
+  5. PUBLIC ACCESS: makePublic = ${spec.makePublic ? 'YES' : 'no'}. Vercel protects new deployments by default (visitors get HTTP 401).
+     If makePublic is YES, make it publicly viewable: PATCH the project's ssoProtection to null via the Vercel API
+     (teamId is in ${DIR}/.vercel/project.json: \`curl -X PATCH "https://api.vercel.com/v9/projects/${slug}?teamId=$TEAMID" -H "Authorization: Bearer $TOK" -H "Content-Type: application/json" -d '{"ssoProtection":null}'\`). If that call is blocked, clearly report the manual step: Vercel → Project → Settings → Deployment Protection → Vercel Authentication → Disabled.
+     Verify the final URL returns HTTP 200 for an anonymous request.
+  6. Return previewUrl (the *.vercel.app URL) and repoUrl.
 
 If a step genuinely fails on auth, STOP and report exactly what's wrong. Never fabricate a URL — verify it loads.`,
   { label: 'deployer', phase: 'Deploy', schema: DEPLOY_SCHEMA }
