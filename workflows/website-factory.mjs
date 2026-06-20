@@ -168,6 +168,10 @@ RULES:
 Output the structured spec — resolved brand, contact, pageStructure, languages, and any client referenceSites.`,
   { label: 'strategist', phase: 'Strategy', schema: SPEC_SCHEMA }
 );
+if (!spec) {
+  log('Strategy stage failed — the strategist agent returned nothing (often an account session/usage limit or API error). Stopping cleanly; re-run when capacity is back.');
+  return { stoppedAt: 'strategy', reason: 'strategist returned null (likely session/usage limit)' };
+}
 const lockedList = spec?.brand?.locked || [];
 log(`Strategy: ${spec.businessName} | locked brand: ${lockedList.length ? lockedList.join(', ') : 'none (factory designs all)'}${spec?.brand?.logoPath ? ' | logo provided' : ''}`);
 
@@ -253,6 +257,12 @@ hero direction (describe whether the hero should be an animated WebGL gradient, 
   )
 )).filter(Boolean);
 
+// Graceful stop if the whole design stage failed (e.g. session/usage limit, API errors).
+if (designs.length === 0) {
+  log('Design stage produced no results — all designer agents failed (often an account session/usage limit or API errors). Stopping cleanly; re-run when capacity is back.');
+  return { stoppedAt: 'design', reason: 'no designs produced (likely session/usage limit)', spec };
+}
+
 const judgeResult = await agent(
   `You are the creative director. Here are ${designs.length} design directions for ${spec.businessName} (audience: ${spec.audience}, tone: ${spec.tone}).
 ${designs.map((d, i) => `\n[${i}] ${d.name}: ${d.rationale}\nPalette: ${JSON.stringify(d.palette)}\nFonts: ${JSON.stringify(d.fonts)}`).join('\n')}
@@ -260,8 +270,9 @@ ${designs.map((d, i) => `\n[${i}] ${d.name}: ${d.rationale}\nPalette: ${JSON.str
 Pick the single strongest, most distinctive, most on-brief direction. Return its index and why.`,
   { label: 'creative-director', phase: 'Design', schema: JUDGE_SCHEMA }
 );
-const design = designs[judgeResult.winnerIndex] || designs[0];
-log(`Selected design: ${design?.name} — ${judgeResult.why}`);
+const winner = (judgeResult && typeof judgeResult.winnerIndex === 'number') ? judgeResult.winnerIndex : 0;
+const design = designs[winner] || designs[0];
+log(`Selected design: ${design?.name || '(unnamed)'} — ${judgeResult?.why || 'default (no judge result)'}`);
 
 // ---- Stage 2b: Interaction design -----------------------------------------
 phase('Interaction');
