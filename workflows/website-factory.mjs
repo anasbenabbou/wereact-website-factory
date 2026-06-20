@@ -234,6 +234,7 @@ const research = await agent(
   `You are a design researcher. Find what PREMIUM looks like for: ${spec.businessName} — ${spec.goal}. Niche/audience: ${spec.audience}.
 Client reference sites (if any): ${(spec.referenceSites || []).join(', ') || 'none'}.
 
+0. FIRST read ${FACTORY}/design-knowledge/reference-teardowns.md — the operator's curated taste benchmark + premium patterns. Treat it as the bar and the house style.
 1. Use WebSearch (find it via ToolSearch: "web search") to find ~10 award-winning / premium websites in this niche and adjacent ones.
    Good queries: "best ${spec.businessName.split(' ')[0]} websites awwwards", "<niche> site of the day awwwards", "premium <niche> web design".
    Curated galleries to draw from: awwwards.com, godly.website, land-book.com, lapa.ninja,
@@ -276,6 +277,14 @@ Aim for Site-of-the-Day craft: a strong, ORIGINAL art direction with a memorable
 generic-AI tells (default purple gradients, Inter everywhere, centered hero + 3 cards). Think distinctive type pairing
 (use characterful display fonts), confident color, generous negative space or bold maximalism, and a clear visual hook.
 Invoke the frontend-design skill's principles.
+
+ANTI-SAMENESS — this is critical (every prior site looked the same). You MUST define a UNIQUE design language, not reuse template defaults:
+- STUDY the operator's taste benchmark first: read ${FACTORY}/design-knowledge/reference-teardowns.md and match that level; pick the teardown closest to this niche as a structural reference.
+- Choose a DELIBERATE shape language: a specific border-radius scale (often sharp 0–4px for premium, NOT default rounded-2xl) — state it.
+- Design a DISTINCTIVE button style, card treatment, and section structure unique to this brand (don't default to hero→3-cards→FAQ).
+- Define a brand-specific MOTION SIGNATURE (not the generic fade-up on everything). Note which advanced modules fit:
+  ScrollScrubVideo, ImageSequence (product 360), PinnedHorizontal, StickyStack, Counter — plus the motion kit.
+- The result must be visibly different from a default template and from the other directions.
 
 Deliver: a 9-step brand color ramp (brand-50..900) + ink/paper hex; Google Font choices for display + body (pick fonts
 with real personality); a ready-to-paste Tailwind v4 @theme CSS block matching the template token names
@@ -402,6 +411,7 @@ STEPS:
    USE THE REAL DATA: build the tour/service cards (and any tours/[slug] detail pages) from spec.offerings (${(spec.offerings || []).length} items: ${(spec.offerings || []).map((o) => o.name).filter(Boolean).join(', ') || 'none — generate sensible ones'}); build the "why us"/stats section from spec.trust (${JSON.stringify(spec.trust || {})}). Never leave lorem/placeholder text.
 6. HERO: implement the chosen treatment "${interaction?.heroTreatment || 'shader'}" —
    shader → template default (ShaderHeroClient); gradient → <ShaderGradientHero colors={[brand600, brand400, brand900]} /> from components/visual (premium shadergradient.co animated gradient); image → <Hero image="/hero.png"/>; video → <BgVideo src="/hero.mp4" poster="/hero-poster.jpg"/>; split → split-screen layout. Take the hero's composition/energy from the standout hero pattern the research stage captured (supahero/references).
+6b. DESIGN LANGUAGE: follow the unique shape/button/motion language from brand-spec.md + the chosen design — apply the SPECIFIC border-radius scale (don't default to rounded-2xl everywhere), the bespoke button style, and a non-generic section structure. Read ${DIR}/DESIGN-RESOURCES.md for the full component vocabulary. Use the ADVANCED motion modules (@/components/motion: ScrollScrubVideo, ImageSequence, PinnedHorizontal, StickyStack, Counter) for storytelling where the design calls for it — e.g. PinnedHorizontal for a tours/fleet/gallery strip, StickyStack for process/features, Counter for stats, ImageSequence/ScrollScrubVideo for a product/hero reveal. Do NOT apply the same fade-up to everything.
 7. MOTION: implement the interaction spec using the template kit (already wired: SmoothScroll + Cursor global, PageTransition via template.tsx). Apply per the spec:
 ${(interaction?.interactions || []).map((x) => `   - ${x.where}: ${x.effect} [${x.component}]`).join('\n') || '   - tasteful scroll reveals + magnetic CTAs'}
    Use SplitText for big headlines, Magnetic on primary CTAs, Parallax on hero/media, Reveal on sections. Keep it tasteful — restraint reads premium. Everything must respect reduced-motion (primitives already do).
@@ -476,7 +486,7 @@ const qa = (await parallel(
     agent(
       `You are a QA engineer reviewing the live site ${deploy.previewUrl} (URL) through ONE lens: ${l.key}.
 Inspect: ${l.prompt.replace('${URL}', deploy.previewUrl)}
-Use the Chrome DevTools MCP and/or the gstack browse skill (real headless browser) as needed.
+Use the Chrome DevTools MCP and/or gstack browse (real headless browser). TAKE FULL-PAGE SCREENSHOTS at mobile (375) and desktop (1440) and VISUALLY CRITIQUE what you actually SEE — don't assume from the DOM. Judge it against ${FACTORY}/design-knowledge/reference-teardowns.md (the premium bar).
 Report concrete findings with severity (blocker/major/minor) and the precise fix. Set pass=true only if no blocker/major issues for this lens.`,
       { label: `qa:${l.key}`, phase: 'QA', schema: QA_SCHEMA }
     )

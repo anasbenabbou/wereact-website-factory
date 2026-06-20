@@ -17,6 +17,15 @@ All reduced-motion safe, Tailwind v4 + framer-motion, brand-token aware.
 `SmoothScroll` (global), `Cursor`, `Magnetic`, `Parallax`, `SplitText`,
 `PageTransition`, `Reveal`. See template README.
 
+## Advanced scroll-motion library (`@/components/motion/`) — the high-craft stuff
+Use these for award-level scroll storytelling (GSAP ScrollTrigger, all reduced-motion safe):
+- `ScrollScrubVideo` — video playhead driven by scroll (cinematic product/UGC reveal). Feed an ffmpeg-optimized mp4.
+- `ImageSequence` — canvas frame-sequence on scroll = the "product rotates as you scroll" (watch/car/bottle 360). Pass `frames=[urls]`.
+- `PinnedHorizontal` — section pins, track scrolls sideways (galleries, tours, fleet, portfolio).
+- `StickyStack` — stacking cards that pin + scale as the next scrolls over (process/features storytelling).
+- `Counter` — count-up stat on view (trust/stat rows).
+**Don't apply the same fade-up to everything** — pick a brand-specific motion signature and compose these.
+
 ## Visual (`@/components/visual/`)
 - `ShaderHeroClient` — lightweight WebGL gradient (template's own shader)
 - `ShaderGradientHero` — **shadergradient.co** animated gradient (premium, brand colors) — `colors={[brand600,brand400,brand900]}`, `type` plane|sphere|waterPlane
