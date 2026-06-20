@@ -4,7 +4,7 @@ export const meta = {
   whenToUse: 'When the operator gives a website brief and wants a finished, deployed *.vercel.app preview',
   phases: [
     { title: 'Strategy', detail: 'intake.md → structured spec' },
-    { title: 'Research', detail: 'auto-find + distill 10 award sites in the niche' },
+    { title: 'Research', detail: 'auto-moodboard: screenshot + distill 10 award sites in the niche' },
     { title: 'Design', detail: '3 award-grade art directions + judge' },
     { title: 'Interaction', detail: 'motion & interaction design spec' },
     { title: 'Content', detail: 'copy + assets (images/video) in parallel' },
@@ -227,6 +227,7 @@ const RESEARCH_SCHEMA = {
     },
     paletteIdeas: { type: 'array', items: { type: 'string' } },
     layoutPatterns: { type: 'array', items: { type: 'string' } },
+    moodboard: { type: 'array', items: { type: 'string' }, description: 'relative paths of full-page reference screenshots saved to <clientDir>/moodboard/' },
     summary: { type: 'string', description: 'a tight art-direction brief grounded in the references' },
   },
 };
@@ -241,6 +242,7 @@ Client reference sites (if any): ${(spec.referenceSites || []).join(', ') || 'no
    **supahero.io** (best-in-class HERO sections — always study this for the hero), and
    **dark.design** (premium dark-theme sites — prioritize when the brief wants a dark/cinematic look).
 2. Pick the 8-12 strongest. For a few of the best, use WebFetch to study them. Capture at least one standout HERO pattern (from supahero or the references) to inform the hero design.
+2b. BUILD A VISUAL MOODBOARD (critical — show, don't just tell): capture FULL-PAGE screenshots of the 8-10 best references and save them to ${DIR}/moodboard/ (mkdir it). Use the Chrome DevTools MCP (ToolSearch: "chrome devtools navigate screenshot" — navigate to each URL, take a full-page screenshot, save to ${DIR}/moodboard/<sitename>.png) or gstack browse. Return the saved relative paths in moodboard[]. These images are what the designers will actually SEE.
 3. Distill WHY they read as premium into concrete, reusable PRINCIPLES (layout systems, type scale & pairing, color use,
    spacing/whitespace, motion, imagery treatment, section patterns) — rules the designer can apply.
 4. Write the findings to ${DIR}/design-context.md (references + principles + a tight art-direction summary).
@@ -248,7 +250,7 @@ Client reference sites (if any): ${(spec.referenceSites || []).join(', ') || 'no
 Return the structured research. Be specific and opinionated — this is the taste benchmark the build must hit.`,
   { label: 'design-researcher', phase: 'Research', schema: RESEARCH_SCHEMA }
 );
-log(`Research: ${research?.references?.length || 0} premium references, ${research?.principles?.length || 0} design principles distilled`);
+log(`Research: ${research?.references?.length || 0} references, ${research?.principles?.length || 0} principles, ${research?.moodboard?.length || 0} moodboard screenshots captured`);
 
 // ---- Stage 2: Design (3 variants + judge) ---------------------------------
 phase('Design');
@@ -277,6 +279,10 @@ Aim for Site-of-the-Day craft: a strong, ORIGINAL art direction with a memorable
 generic-AI tells (default purple gradients, Inter everywhere, centered hero + 3 cards). Think distinctive type pairing
 (use characterful display fonts), confident color, generous negative space or bold maximalism, and a clear visual hook.
 Invoke the frontend-design skill's principles.
+
+LOOK AT THE MOODBOARD FIRST (show, don't tell): the research stage saved full-page reference screenshots to ${DIR}/moodboard/.
+List that folder and **Read each image** so you actually SEE the target level — match that polish, layout density, type, spacing,
+color, and motion energy. Designing from the images beats designing from descriptions.
 
 ANTI-SAMENESS — this is critical (every prior site looked the same). You MUST define a UNIQUE design language, not reuse template defaults:
 - STUDY the operator's taste benchmark first: read ${FACTORY}/design-knowledge/reference-teardowns.md and match that level; pick the teardown closest to this niche as a structural reference.
